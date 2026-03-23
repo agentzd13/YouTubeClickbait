@@ -1,0 +1,27 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+env/
+.env
+
+# MacOS/Windows specific
+.DS_Store
+Thumbs.db
+
+# User data (prevent uploading real data to Github by accident)
+my_data/
+*.csv
+!tests/*.csv
+
+# IDEs
+.idea/
+.vscode/

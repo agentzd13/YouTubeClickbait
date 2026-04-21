@@ -8,11 +8,29 @@
 
 Вывод в консоль в виде таблицы с колонками: `title`, `ctr`, `retention_rate`, отсортировано по убыванию `ctr`.
 
-## Пример запуска
+## Примеры запуска
+
+Один CSV-файл:
+
+```bash
+python main.py --files stats1.csv --report clickbait
+```
+
+Несколько CSV-файлов:
 
 ```bash
 python main.py --files stats1.csv stats2.csv --report clickbait
 ```
+
+Пример ошибки (несуществующий отчет):
+
+```bash
+python main.py --files stats1.csv --report unknown-report
+```
+
+## Скриншот запуска
+
+![Пример запуска CLI](assets/clickbait-run.png)
 
 ## Что важно для ревью
 

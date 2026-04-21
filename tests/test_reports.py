@@ -1,55 +1,49 @@
 import pytest
-from reports.base import BaseReport
+
+from reports.clickbait import ClickbaitReport
 from reports.registry import ReportRegistry
-from reports.median_coffee import MedianCoffeeReport
+
 
 def test_registry_registration():
     registry = ReportRegistry()
-    registry.register("median-coffee", MedianCoffeeReport)
-    
-    report = registry.get_report("median-coffee")
-    assert isinstance(report, MedianCoffeeReport)
+    registry.register("clickbait", ClickbaitReport)
+
+    report = registry.get_report("clickbait")
+    assert isinstance(report, ClickbaitReport)
+
 
 def test_registry_invalid_report():
     registry = ReportRegistry()
     with pytest.raises(ValueError, match="not registered"):
         registry.get_report("non-existent")
 
-def test_median_coffee_report_logic():
-    data = [
-        {"student": "Иван", "coffee_spent": 600.0},
-        {"student": "Иван", "coffee_spent": 700.0},
-        {"student": "Иван", "coffee_spent": 800.0},
-        {"student": "Иван", "coffee_spent": "invalid"}, # Should be ignored because it cannot be parsed by float later if we used direct cast? 
-        {"student": "Анна", "coffee_spent": 100.0},
-        {"student": "Анна", "coffee_spent": 100.0},
-        {"student": "Анна"}, # Missing coffee_spent
-    ]
-    report = MedianCoffeeReport()
-    
-    # Wait, the logic converts to float manually if possible, or skips. Let's provide strings that can be converted since CSV does that.
-    data_with_strings = [
-        {"student": "Иван", "coffee_spent": "600"},
-        {"student": "Иван", "coffee_spent": "800"},
-        {"student": "Иван", "coffee_spent": 1000.0}, # Mixed types for robustness
-        {"student": "Анна", "coffee_spent": 200},
-        {"student": "Анна", "coffee_spent": 300},
-    ]
-    
-    result = report.generate(data_with_strings)
-    
-    assert len(result) == 2
-    # Иван median of 600, 800, 1000 is 800
-    # Анна median of 200, 300 is 250
-    assert result[0] == ("Иван", 800)
-    assert result[1] == ("Анна", 250)
 
-def test_median_coffee_report_format():
-    report = MedianCoffeeReport()
-    result = [("Иван", 800)]
+def test_clickbait_report_filters_and_sorts_by_ctr():
+    data = [
+        {"title": "Video 1", "ctr": 18.2, "retention_rate": 35.0},
+        {"title": "Video 2", "ctr": 25.0, "retention_rate": 22.0},
+        {"title": "Video 3", "ctr": 16.5, "retention_rate": 42.0},
+        {"title": "Video 4", "ctr": 14.2, "retention_rate": 30.0},
+        {"title": "Video 5", "ctr": 21.0, "retention_rate": 35.0},
+    ]
+    report = ClickbaitReport()
+
+    result = report.generate(data)
+
+    assert result == [
+        ("Video 2", 25.0, 22.0),
+        ("Video 5", 21.0, 35.0),
+        ("Video 1", 18.2, 35.0),
+    ]
+
+
+def test_clickbait_report_format_output():
+    report = ClickbaitReport()
+    result = [("Video X", 22.0, 28.0)]
     output = report.format_output(result)
-    
-    assert "Иван" in output
-    assert "800" in output
-    assert "student" in output
-    assert "median_coffee" in output
+
+    assert "Video X" in output
+    assert "22" in output
+    assert "28" in output
+    assert "title" in output
+    assert "retention_rate" in output

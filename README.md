@@ -1,65 +1,34 @@
-# Отчет о потреблении кофе ☕
+# YouTube Clickbait Report CLI
 
-Консольное приложение для обработки данных из CSV-файлов и формирования агрегированных отчетов, в частности `median-coffee` (медианная сумма трат на кофе по каждому студенту за всю сессию). Разработано в соответствии с паттерном Strategy/Registry для легкого добавления новых отчетов.
+Консольное приложение читает один или несколько CSV-файлов с метриками видео YouTube и строит отчет `clickbait`.
 
-## 🚀 Как пользоваться скриптом (Локально)
+В отчет попадают только видео, у которых одновременно:
+- `ctr > 15`
+- `retention_rate < 40`
 
-**Шаг 1:** Положите ваши `.csv` файлы (например: `math.csv`, `physics.csv`) в любую папку рядом со скриптом. Формат данных должен соблюдать следующую структуру:
-`student,date,coffee_spent,sleep_hours,study_hours,mood,exam`
+Вывод в консоль в виде таблицы с колонками: `title`, `ctr`, `retention_rate`, отсортировано по убыванию `ctr`.
 
-**Шаг 2:** Установите зависимости:
-```bash
-pip install -r requirements.txt
-```
-
-**Шаг 3:** Запустите скрипт через терминал:
-```bash
-python main.py --files math.csv physics.csv --report median-coffee
-```
-*Скрипт прочитает указанные файлы и выведет таблицу с отчетом в консоль.*
-
----
-
-## 🐳 Как развернуть и запустить в Docker (Кроссплатформенно)
-
-Докер позволяет запустить приложение на любой машине без установки Python.
-
-**Шаг 1: Сборка образа**
-Находясь в папке проекта, выполните:
-```bash
-docker build -t coffee-reports .
-```
-
-**Шаг 2: Подготовка данных**
-1. Создайте в папке с проектом директорию `my_data`
-2. Положите внутрь все ваши CSV файлы, которые нужно проанализировать.
-
-**Шаг 3: Запуск скрипта через Docker**
-Для работы скрипт должен "увидеть" ваши файлы. Мы примонтируем локальную папку `my_data` внутрь контейнера по пути `/app/data/:ro` (read-only):
+## Пример запуска
 
 ```bash
-# Для Linux / MacOS:
-docker run --rm -v $(pwd)/my_data:/app/data/:ro coffee-reports --files /app/data/math.csv /app/data/physics.csv --report median-coffee
-
-# Для Windows (PowerShell):
-docker run --rm -v ${PWD}/my_data:/app/data/:ro coffee-reports --files /app/data/math.csv /app/data/physics.csv --report median-coffee
+python main.py --files stats1.csv stats2.csv --report clickbait
 ```
 
-**Что здесь происходит:**
-- `docker run --rm` — запускает контейнер и удаляет его после вывода результата, чтобы не засорять систему.
-- `-v $(pwd)/my_data:/app/data/:ro` — прокидывает вашу локальную папку `my_data` в папку `/app/data/` внутри контейнера.
-- `--files /app/data/math.csv` — говорит скрипту внутри докера, где лежат файлы.
-- `--report median-coffee` — название отчета.
+## Что важно для ревью
 
----
+- Для чтения CSV и CLI используется стандартная библиотека (`csv`, `argparse`).
+- Архитектура расширяемая: новый отчет добавляется отдельным классом и регистрируется в `ReportRegistry`.
+- Обрабатываются ошибки пользователя: несуществующий отчет и несуществующие файлы.
 
-## 🛠 Тестирование
-Проект покрыт unit-тестами. Для запуска с проверкой покрытия выполните:
+## Тесты
+
 ```bash
-pytest tests/ -v --cov=.
+pytest -v
 ```
 
-## 🏗 Архитектура приложения
-* `main.py`: Точка входа в консольное CLI.
-* `core/parser.py`: Отвечает за парсинг и безопасную валидацию типов CSV.
-* `reports/registry.py` и `reports/base.py`: Гибкая архитектура (Registry/Strategy), которая дает возможность добавлять новые отчеты через параметры запуска без изменения `main.py` (OCP).
+## Docker (опционально)
+
+```bash
+docker build -t youtube-report .
+docker run --rm -v ${PWD}:/app/data:ro youtube-report --files /app/data/stats1.csv /app/data/stats2.csv --report clickbait
+```

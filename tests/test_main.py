@@ -1,49 +1,52 @@
-import pytest
 import subprocess
-import os
+import sys
+from pathlib import Path
 
-def test_main_script_help():
-    result = subprocess.run(["python3", "main.py", "--help"], capture_output=True, text=True)
-    # Could be python or python3 on windows, let's just check if it exits ok or use sys.executable
-    import sys
-    result = subprocess.run([sys.executable, "main.py", "--help"], capture_output=True, text=True)
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _run_main(args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, "main.py", *args],
+        capture_output=True,
+        text=True,
+        cwd=PROJECT_ROOT,
+    )
+
+
+def test_main_help():
+    result = _run_main(["--help"])
+
     assert result.returncode == 0
     assert "--files" in result.stdout
     assert "--report" in result.stdout
 
-def test_main_script_execution(tmp_path):
-    import sys
-    import csv
-    
-    file_path = tmp_path / "test.csv"
-    with open(file_path, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(["student", "coffee_spent"])
-        writer.writerow(["Иван", "600"])
-        
-    result = subprocess.run(
-        [sys.executable, "main.py", "--files", str(file_path), "--report", "median-coffee"],
-        capture_output=True, text=True
-    )
-    
-    assert result.returncode == 0
-    assert "Иван" in result.stdout
-    assert "600" in result.stdout
 
-def test_main_script_invalid_report(tmp_path):
-    import sys
-    import csv
-    
-    file_path = tmp_path / "test.csv"
-    with open(file_path, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(["student", "coffee_spent"])
-        writer.writerow(["Иван", "600"])
-        
-    result = subprocess.run(
-        [sys.executable, "main.py", "--files", str(file_path), "--report", "invalid-report"],
-        capture_output=True, text=True
+def test_main_generates_clickbait_report_for_multiple_files():
+    result = _run_main(
+        ["--files", "stats1.csv", "stats2.csv", "--report", "clickbait"]
     )
-    
+
+    assert result.returncode == 0
+    assert "Секрет который скрывают тимлиды" in result.stdout
+    assert "Почему продакшн упал в пятницу вечером" in result.stdout
+    assert "Почему сеньоры не носят галстуки" not in result.stdout
+
+    top_1 = result.stdout.find("Секрет который скрывают тимлиды")
+    top_2 = result.stdout.find("Почему продакшн упал в пятницу вечером")
+    assert top_1 < top_2
+
+
+def test_main_invalid_report_returns_error():
+    result = _run_main(["--files", "stats1.csv", "--report", "unknown-report"])
+
     assert result.returncode != 0
-    assert "Error: Report 'invalid-report' is not registered" in result.stderr
+    assert "not registered" in result.stderr
+
+
+def test_main_missing_file_returns_error():
+    result = _run_main(["--files", "missing.csv", "--report", "clickbait"])
+
+    assert result.returncode != 0
+    assert "Error reading files" in result.stderr

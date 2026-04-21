@@ -1,37 +1,45 @@
-import pytest
-import os
 import csv
+
 from core.parser import parse_csv_files
 
-@pytest.fixture
-def sample_csv(tmp_path):
-    file_path = tmp_path / "test.csv"
-    with open(file_path, 'w', newline='', encoding='utf-8') as f:
+
+def _write_csv(path, rows):
+    with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["student", "date", "coffee_spent", "sleep_hours", "study_hours", "mood", "exam"])
-        writer.writerow(["Иван", "2024-06-01", "600", "3.0", "15", "зомби", "Математика"])
-        writer.writerow(["Иван", "2024-06-02", "bad_data", "2.5", "17", "зомби", "Математика"])
-    return str(file_path)
+        writer.writerow(
+            ["title", "ctr", "retention_rate", "views", "likes", "avg_watch_time"]
+        )
+        writer.writerows(rows)
 
-@pytest.fixture
-def empty_csv(tmp_path):
-    file_path = tmp_path / "empty.csv"
-    with open(file_path, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(["student", "date", "coffee_spent", "sleep_hours", "study_hours", "mood", "exam"])
-    return str(file_path)
 
-def test_parse_csv_files(sample_csv):
-    data = parse_csv_files([sample_csv])
+def test_parse_csv_files_converts_numeric_fields(tmp_path):
+    file_path = tmp_path / "stats.csv"
+    _write_csv(
+        file_path,
+        [
+            ["Video A", "18.2", "35", "45200", "1240", "4.2"],
+            ["Video B", "9.5", "82", "31500", "890", "8.9"],
+        ],
+    )
+
+    data = parse_csv_files([str(file_path)])
+
     assert len(data) == 2
-    assert data[0]['student'] == "Иван"
-    assert data[0]['coffee_spent'] == 600.0  # properly converted
-    assert data[1]['coffee_spent'] == "bad_data"  # kept as str since it couldn't be converted
+    assert data[0]["title"] == "Video A"
+    assert data[0]["ctr"] == 18.2
+    assert data[0]["retention_rate"] == 35.0
+    assert data[0]["views"] == 45200.0
+    assert data[0]["likes"] == 1240.0
+    assert data[0]["avg_watch_time"] == 4.2
 
-def test_parse_empty_csv(empty_csv):
-    data = parse_csv_files([empty_csv])
-    assert len(data) == 0
 
-def test_multiple_files(sample_csv, empty_csv):
-    data = parse_csv_files([sample_csv, empty_csv])
+def test_parse_multiple_files_combines_data(tmp_path):
+    file_path_1 = tmp_path / "stats1.csv"
+    file_path_2 = tmp_path / "stats2.csv"
+    _write_csv(file_path_1, [["Video A", "18", "35", "100", "10", "4.2"]])
+    _write_csv(file_path_2, [["Video B", "22", "20", "300", "30", "3.1"]])
+
+    data = parse_csv_files([str(file_path_1), str(file_path_2)])
+
     assert len(data) == 2
+    assert [row["title"] for row in data] == ["Video A", "Video B"]
